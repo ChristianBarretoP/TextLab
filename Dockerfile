@@ -71,10 +71,6 @@ SHELL ["conda", "run", "-n", "scallop-env", "/bin/bash", "-c"]
 # ----------------------------
 # Install PyTorch (using mamba for better reliability)
 # ----------------------------
-# RUN mamba install -y \
-#     pytorch torchvision torchaudio cpuonly \
-#     transformers \
-#     -c pytorch -c huggingface
 RUN pip install torch torchvision torchaudio \
     --index-url https://download.pytorch.org/whl/cu121 && \
     pip install transformers==4.46.3
@@ -101,6 +97,11 @@ WORKDIR /home/scallop_user/labs/nyse
 COPY --chown=scallop_user:scallop_user . .
 
 WORKDIR /home/scallop_user/labs/nyse
+
+# ----------------------------
+# Install packages
+# ----------------------------
+RUN pip install --no-cache-dir -r requirements.txt
 
 # ----------------------------
 # Keep container alive

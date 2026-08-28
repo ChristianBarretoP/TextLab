@@ -13,7 +13,8 @@ from configs.settings import (
 # ============================================================
 # 1. CONFIGURAÇÃO
 # ============================================================
-HF_TOKEN = os.getenv()  # Seu token de leitura (Read token)
+load_dotenv()
+HF_TOKEN = os.getenv("LLAMA_API_KEY")  # Seu token de leitura (Read token)
 
 print("CUDA disponible:", torch.cuda.is_available())
 
@@ -25,16 +26,16 @@ if torch.cuda.is_available():
 # 2. PROMPT
 # ============================================================
 
-SYSTEM_PROMPT = Path(prompt_dir).read_text(encoding="utf-8")
+SYSTEM_PROMPT = Path(PROMPT_COMPETENCIA_1).read_text(encoding="utf-8")
 
 
 # ============================================================
-# 2. MODELO
+# 3. MODELO
 # ============================================================
 
-tokenizer = AutoTokenizer.from_pretrained(model_id, token=HF_TOKEN)
+tokenizer = AutoTokenizer.from_pretrained(MODEL_IA_LLAMA, token=HF_TOKEN)
 model = AutoModelForCausalLM.from_pretrained(
-    model_id,
+    MODEL_IA_LLAMA,
     token=HF_TOKEN,
     torch_dtype=torch.float16,
     device_map="auto" # Faz o modelo rodar na sua placa de vídeo local
@@ -44,7 +45,7 @@ print("Modelo cargado correctamente")
 print("Device map: ", model.hf_device_map)
 
 # ============================================================
-# 5. FUNÇÃO PARA GERAR UMA WEAK LABEL
+# 4. FUNÇÃO PARA GERAR UMA WEAK LABEL
 # ============================================================
 def generate_weak_label(essay):
 
@@ -106,104 +107,10 @@ def generate_weak_label(essay):
     match = re.search(r"\{.*\}", response_text, re.DOTALL)
     if match:
         json_str = match.group(0)
-        return json.loads(json_str)
+        try:
+            result = json.loads(json_str)
+        except json.JSONDecodeError:
+            result = json_str
+        return result
     else:
         raise ValueError("Nenhum bloco JSON válido foi encontrado no retorno do modelo.")
-
-
-# ============================================================
-# 6. CARREGAR DATASET
-# ============================================================
-dataset = load_dataset(DATASET_NAME, cache_dir="tmp/aes_enem", trust_remote_code=True)[
-    "train"
-]
-
-# ============================================================
-#  7. SALVAR OS RESULTADOS
-# ============================================================
-
-
-def load_results(output_file):
-    """
-    Carrega resultados existentes.
-    Se o arquivo não existir, retorna lista vazia.
-    """
-
-    if not os.path.exists(output_file):
-        return []
-
-    try:
-        with open(output_file, "r", encoding="utf-8") as f:
-            return json.load(f)
-
-    except json.JSONDecodeError:
-        print("O arquivo JSON está corrompido.")
-        print("Iniciando com resultados vazios.")
-        return []
-
-def save_results(results, output_file):
-    """
-    Salva os resultados imediatamente.
-    """
-
-    # cria o diretório caso não exista
-    os.makedirs(os.path.dirname(output_file), exist_ok=True)
-
-    # arquivo temporário
-    temp_file = output_file + ".tmp"
-
-    with open(temp_file, "w", encoding="utf-8") as f:
-
-        json.dump(results, f, ensure_ascii=False, indent=4)
-
-        # garante que os dados sejam escritos
-        f.flush()
-        os.fsync(f.fileno())
-
-    # substitui o arquivo antigo somente depois
-    # que o novo foi completamente escrito
-    os.replace(temp_file, output_file)
-
-OUTPUT_FILE = os.path.join(result_dir, OUTPUT_FILE_NAME)
-
-results = load_results(OUTPUT_FILE)
-
-print(f"Resultados já salvos: {len(results)}")
-
-processed_ids = {item["id"] for item in results}
-
-print(f"IDs já processados: {len(processed_ids)}")
-
-iter = tqdm(dataset, total=len(dataset))
-for i, row in enumerate(iter):
-    id_essay = f"{row['id']}-{row['id_prompt']}"
-
-    # ============================================
-    # Já processado?
-    # ============================================
-    if id_essay in processed_ids:
-        continue
-    essay = row["essay_text"]
-
-    try:
-        weak_label = generate_weak_label(essay)
-
-        # print(weak_label)
-
-        result = {
-            "id": id_essay,
-            "weak_label": weak_label,
-        }
-        results.append(result)
-
-        # adiciona ao conjunto
-        processed_ids.add(id_essay)
-
-        save_results(results, OUTPUT_FILE)
-
-    except Exception as e:
-
-        print(f"Erro no ensaio {id_essay}: {e}")
-        continue
-
-    iter.set_description(f"[Weak label: Total {i+1}/{len(dataset)}]")

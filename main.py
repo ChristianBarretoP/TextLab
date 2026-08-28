@@ -6,9 +6,18 @@ from configs.settings import (
     DATASET_LLM_JBCS,
     CACHE_TEM_DATASET_AES_ENEM_DIR,
     RESULT_DIR,
+    FILE_WEAK_LABEL_GPT,
     FILE_WEAK_LABEL_QWEN,
+    FILE_WEAK_LABEL_LLAMA,
+    FILE_WEAK_LABEL_DEEP_SEEK,
 )
-from src.clients import chat_gpt, qwen, llama, deep_seek
+from src.clients import chat_gpt
+
+# ============================================================
+# 1. CONFIGURAÇÕES
+# ============================================================
+MODEL_IA = chat_gpt
+FILE_OUT_RESULT = FILE_WEAK_LABEL_GPT
 
 # ============================================================
 # 1. CARREGAR DATASET
@@ -67,7 +76,7 @@ def save_results(results, output_file):
 # ============================================================
 #  3. EXECUTA O MODELO
 # ============================================================
-OUTPUT_FILE = os.path.join(RESULT_DIR, FILE_WEAK_LABEL_QWEN)
+OUTPUT_FILE = os.path.join(RESULT_DIR, FILE_OUT_RESULT)
 
 results = load_results(OUTPUT_FILE)
 
@@ -88,7 +97,7 @@ for i, row in enumerate(iter):
         continue
     essay = row["essay_text"]
     try:
-        weak_label = chat_gpt.generate_weak_label(essay)
+        weak_label = MODEL_IA.generate_weak_label(essay)
 
         result = {
             "id": id_essay,
