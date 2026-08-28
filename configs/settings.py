@@ -17,3 +17,5 @@ DATASET_LLM_JBCS = "igorcs/LLM-JBCS"
 FILE_WEAK_LABEL_QWEN = "weak_labels_QWEN.json"
 
 MODEL_IA_QWEN = "Qwen/Qwen3-4B"
+MODEL_IA_LLAMA = "meta-llama/Llama-3.1-8B-Instruct"
+MODEL_IA_DEEP_SEEK = "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B"
